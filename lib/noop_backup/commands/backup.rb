@@ -87,6 +87,8 @@ module NoopBackup::Commands
 
     def remove_partial_upload
       s3_client.delete_object(bucket: config.bucket, key: @key)
+    rescue => e
+      warn "Failed to clean up partial upload #{@key}: #{e.message}"
     end
   end
 end
