@@ -8,7 +8,14 @@ module NoopBackup::Commands
     end
 
     def initialize
-      @key = [config.prefix, Time.now.utc.strftime("%Y%m%dT%H%M%SZ")].join("/")
+      now = Time.now.utc
+      @key = [
+        config.prefix,
+        config.pg_env["PGDATABASE"],
+        now.strftime("%Y"),
+        now.strftime("%m"),
+        "#{now.strftime("%d-%H%M%S")}.dump"
+      ].compact.join("/")
       @bytes = 0
       @started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     end
