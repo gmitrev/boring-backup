@@ -1,0 +1,33 @@
+module Noop::Backup
+  class Configuration
+    attr_accessor :bucket,
+      :region,
+      :prefix,
+      :pg_host,
+      :pg_port,
+      :pg_user,
+      :pg_password,
+      :pg_database
+
+    def initialize
+      @bucket = ENV["NBU_BUCKET"]
+      @region = ENV["NBU_REGION"] || ENV["AWS_REGION"] || "auto"
+      @prefix = "backups"
+    end
+
+    def pg_env
+      {
+        "PGHOST" => pg_host || db_config[:host]&.to_s || "localhost",
+        "PGPORT" => pg_port || db_config[:port]&.to_s,
+        "PGUSER" => pg_user || db_config[:username]&.to_s,
+        "PGPASSWORD" => pg_password || db_config[:password]&.to_s,
+        "PGDATABASE" => pg_database || db_config[:database].to_s
+      }.compact
+    end
+
+    def db_config
+      @db_config ||= defined?(::ActiveRecord) ?
+        ::ActiveRecord::Base.connection_db_config.configuration_hash : {}
+    end
+  end
+end

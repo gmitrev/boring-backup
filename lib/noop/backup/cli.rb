@@ -6,7 +6,8 @@ module Noop::Backup
 
     desc "backup", "Create and store a new backup"
     def backup
-      puts "hola!"
+      Noop::Backup.prepare!
+      Noop::Backup::Commands::Backup.execute
     end
   end
 end
