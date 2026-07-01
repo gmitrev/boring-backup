@@ -15,7 +15,7 @@ module NoopBackup
       @region = ENV["NBU_REGION"] || ENV["AWS_REGION"] || "auto"
       @prefix = "backups"
       @notifiers = [NoopBackup::Notifiers::Stdout.new]
-      @min_size = ENV.fetch("NBU_MIN_SIZE", 1204).to_i
+      @min_size = ENV.fetch("NBU_MIN_SIZE", 1024).to_i
     end
 
     def notifier(type)
