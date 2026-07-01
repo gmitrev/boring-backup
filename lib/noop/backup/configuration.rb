@@ -13,7 +13,7 @@ module Noop::Backup
       @bucket = ENV["NBU_BUCKET"]
       @region = ENV["NBU_REGION"] || ENV["AWS_REGION"] || "auto"
       @prefix = "backups"
-      @notifiers = []
+      @notifiers = [Noop::Backup::Notifiers::Stdout.new]
     end
 
     def notifier(type)
