@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.1.2] - 2026-07-02
+
 - Only `exit 1` when running the CLI, not the backup service
 - Automatically load BackupJob in Rails if using ActiveJob
 
