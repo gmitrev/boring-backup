@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+- Fix legacy branch of AWS upload not receiving the correct credentials
+- Add a basic configuration validation before running the backup
+
 ## [0.1.3] - 2026-07-02
 
 - Pass `access_key_id` and `secret_access_key` in config block

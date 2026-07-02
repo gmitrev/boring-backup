@@ -60,8 +60,8 @@ module NoopBackup
         ::ActiveRecord::Base.connection_db_config.configuration_hash : {}
     end
 
-    # TODO: raise if config invalid (e.g. bucket missing)
     def validate!
+      raise ConfigurationError, "bucket is not configured" if bucket.to_s.empty?
     end
   end
 end

@@ -7,6 +7,8 @@ require_relative "noop_backup/notifiers/stdout"
 module NoopBackup
   class Error < StandardError; end
 
+  class ConfigurationError < Error; end
+
   class << self
     def configuration
       @configuration ||= Configuration.new

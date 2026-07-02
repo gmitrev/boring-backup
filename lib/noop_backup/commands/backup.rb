@@ -21,6 +21,8 @@ module NoopBackup::Commands
     end
 
     def execute
+      config.validate!
+
       commands = [
         [config.pg_env, "pg_dump", "--format=custom", "--no-owner"]
       ]
