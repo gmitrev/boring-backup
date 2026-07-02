@@ -68,7 +68,7 @@ module NoopBackup::Commands
           @bytes = IO.copy_stream(stdout, s3_stream)
         end
       else
-        object = Aws::S3::Resource.new(region: config.region).bucket(config.bucket).object(@key)
+        object = Aws::S3::Resource.new(client: s3_client).bucket(config.bucket).object(@key)
 
         object.upload_stream(part_size: 8 * 1024 * 1024, thread_count: 2) do |s3_stream|
           @bytes = IO.copy_stream(stdout, s3_stream)
