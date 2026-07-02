@@ -1,7 +1,10 @@
 module NoopBackup
   class Configuration
+    # NOTE: These are all going to change a lot before version 1.0.0
     attr_accessor :bucket,
       :region,
+      :access_key_id,
+      :secret_access_key,
       :prefix,
       :pg_host,
       :pg_port,
@@ -11,8 +14,6 @@ module NoopBackup
       :min_size
 
     def initialize
-      @bucket = ENV["NBU_BUCKET"]
-      @region = ENV["AWS_REGION"] || "auto"
       @prefix = "database"
       @notifiers = [NoopBackup::Notifiers::Stdout.new]
       @min_size = ENV.fetch("NBU_MIN_SIZE", 1024).to_i
@@ -46,9 +47,21 @@ module NoopBackup
       }.compact
     end
 
+    def s3_config
+      {
+        region: region,
+        access_key_id: access_key_id,
+        secret_access_key: secret_access_key
+      }.compact
+    end
+
     def db_config
       @db_config ||= defined?(::ActiveRecord) ?
         ::ActiveRecord::Base.connection_db_config.configuration_hash : {}
+    end
+
+    # TODO: raise if config invalid (e.g. bucket missing)
+    def validate!
     end
   end
 end

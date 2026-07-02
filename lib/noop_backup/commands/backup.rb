@@ -55,7 +55,7 @@ module NoopBackup::Commands
     end
 
     def s3_client
-      @_s3_client ||= Aws::S3::Client.new(region: config.region)
+      @_s3_client ||= Aws::S3::Client.new(**config.s3_config)
     end
 
     # Prefer Aws::S3::TransferManager for streaming uploads if available.
