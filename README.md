@@ -2,6 +2,8 @@
 
 Ruby gem for backing up PostgreSQL databases with minimum effort.
 
+This gem is very much __unstable__. Expect APIs to change a lot before v1.0.0 is released.
+
 ## Installation
 
 If using bundler, add the gem to your `Gemfile`:
@@ -24,11 +26,24 @@ The gem requires `pg_dump` to be installed on the machine that is running it.
 
 #### Rails 8 with Solid Queue
 
-(soon) NoopBackup will run automatically using the Solid Queue scheduler.
+Add the NoopBackup job to the `config/recurring.yml` file:
+
+```yaml
+production:
+  # other jobs
+  noop_backup:
+    class: NoopBackup::BackupJob
+    schedule: at 3am every day
+```
+
+The job will run on the `:default` queue on your desired schedule.
+If you wish to customize the job, create a new one and make sure to invoke
+`NoopBackup::Commands::Backup.execute` in the `perform` method.
+
 
 #### Sidekiq, Good Job, whenever
 
-(soon)
+Create a new recurring job and have it invoke `NoopBackup::Commands::Backup.execute`
 
 ### Manually
 
@@ -36,33 +51,23 @@ The gem requires `pg_dump` to be installed on the machine that is running it.
 bundle exec nbu backup
 ```
 
-This command will dump the database and stream it to S3 without writing anything to disk. Use any
-scheduler or even cron to run it periodically.
+This command will dump the database and stream it to your configured destinations without writing
+anything to disk. Use any scheduler or even cron to run it periodically.
 
 ## Configuration
 
-The gem needs AWS credentials and a bucket name:
-
-```
-AWS_REGION=region
-AWS_ACCESS_KEY_ID=your-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-NBU_BUCKET=s3-bucket
-NBU_MIN_SIZE=2048
-```
-
-If your app already has the AWS SDK set up, only the bucket needs to be configured.
-
-Alternatively, the gem can be configured with an initializer:
+All configuration options can be edited in the initializer:
 
 ```rb
 # config/initializers/noop-backup.rb
 
 NoopBackup.configure do |config|
-  config.bucket = 'bucket-name'
-  config.region = 'eu-central-1'
-  config.prefix = Rails.env
-  config.min_size = 2048
+  config.register(:s3) do |store|
+    store.bucket = Settings.aws.bucket
+    store.region = Settings.aws.region
+    store.access_key_id = Settings.aws.access_key_id
+    store.secret_access_key = Settings.aws.secret_access_key
+  end
 
   config.notifier :slack do |slack|
     slack.webhook_url = 'https://hooks.slack.com/services/whatever'
