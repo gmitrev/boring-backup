@@ -10,6 +10,7 @@ module NoopBackup
       result = NoopBackup::Commands::Backup.execute
 
       result.report
+      exit 1 unless result.success
     rescue => e
       warn e
       exit 1
