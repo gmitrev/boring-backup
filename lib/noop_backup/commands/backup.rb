@@ -47,7 +47,7 @@ module NoopBackup::Commands
         [writer, thread]
       end
 
-      sinks_fanout = Tee.new(sinks.map(&:first))
+      sinks_fanout = NoopBackup::Tee.new(sinks.map(&:first))
 
       Open3.pipeline_r(*commands) do |last_stdout, wait_threads|
         @bytes = IO.copy_stream(last_stdout, sinks_fanout)

@@ -1,5 +1,6 @@
 require_relative "noop_backup/version"
 require_relative "noop_backup/configuration"
+require_relative "noop_backup/tee"
 require_relative "noop_backup/commands/backup"
 require_relative "noop_backup/stores/s3"
 require_relative "noop_backup/notifiers/slack"
