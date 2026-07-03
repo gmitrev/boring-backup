@@ -1,7 +1,7 @@
 require "aws-sdk-s3"
 
 module NoopBackup::Stores
-  class S3
+  class S3 < Store
     attr_accessor :bucket, :region, :access_key_id, :secret_access_key
 
     def initialize
@@ -72,10 +72,6 @@ module NoopBackup::Stores
         access_key_id: access_key_id,
         secret_access_key: secret_access_key
       }.compact
-    end
-
-    def config
-      @config ||= NoopBackup.config
     end
   end
 end
