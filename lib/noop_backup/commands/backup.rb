@@ -26,6 +26,7 @@ module NoopBackup::Commands
 
     def initialize
       @store_results = []
+      @key = generate_key
     end
 
     def execute
@@ -74,7 +75,7 @@ module NoopBackup::Commands
     # 1. Check if any stores are registered.
     # 2. Make sure **all** stores have a valid configuration
     def perform_sanity_check!
-      raise NoopBackup::ConfigurationError, "No backup stores resistered" if config.stores.empty?
+      raise NoopBackup::ConfigurationError, "No backup stores registered" if config.stores.empty?
 
       config.stores.each(&:validate!)
     end
@@ -87,18 +88,16 @@ module NoopBackup::Commands
     #
     #  prefix   db_name            y    m  d  h  m  s  ms
     # /database/db_name_production/2026/07/03-14-47-23-724.dump
-    def key
-      @key ||= begin
-        now = Time.now.utc
+    def generate_key
+      now = Time.now.utc
 
-        [
-          config.prefix,
-          config.pg_env["PGDATABASE"],
-          now.strftime("%Y"),
-          now.strftime("%m"),
-          "#{now.strftime("%d-%H-%M-%S-%L")}.dump"
-        ].compact.join("/")
-      end
+      [
+        config.prefix,
+        config.pg_env["PGDATABASE"],
+        now.strftime("%Y"),
+        now.strftime("%m"),
+        "#{now.strftime("%d-%H-%M-%S-%L")}.dump"
+      ].compact.join("/")
     end
   end
 end
