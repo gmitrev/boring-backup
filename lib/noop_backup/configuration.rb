@@ -6,8 +6,9 @@ module NoopBackup
       :pg_port,
       :pg_user,
       :pg_password,
-      :pg_database,
-      :stores
+      :pg_database
+
+    attr_reader :stores
 
     def initialize
       @prefix = ENV.fetch("NBU_PREFIX", "database")
