@@ -37,6 +37,10 @@ module NoopBackup::Stores
 
       duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
 
+      if config.min_size && bytes < config.min_size.to_i
+        raise NoopBackup::RuntimeError, "backup too small: #{NoopBackup.utils.human_size(bytes)} < min_size (#{NoopBackup.utils.human_size(config.min_size)})"
+      end
+
       Result.new(success: true, store: :s3, bytes:, key:, duration:)
     rescue => e
       duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
@@ -68,6 +72,10 @@ module NoopBackup::Stores
         access_key_id: access_key_id,
         secret_access_key: secret_access_key
       }.compact
+    end
+
+    def config
+      @config ||= NoopBackup.config
     end
   end
 end
