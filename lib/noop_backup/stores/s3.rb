@@ -38,7 +38,7 @@ module NoopBackup::Stores
       duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
 
       if config.min_size && bytes < config.min_size.to_i
-        raise NoopBackup::RuntimeError, "backup too small: #{NoopBackup.utils.human_size(bytes)} < min_size (#{NoopBackup.utils.human_size(config.min_size)})"
+        raise NoopBackup::DumpTooSmallError, "backup too small: #{NoopBackup.utils.human_size(bytes)} < min_size (#{NoopBackup.utils.human_size(config.min_size)})"
       end
 
       Result.new(success: true, store: :s3, bytes:, key:, duration:)
@@ -52,6 +52,11 @@ module NoopBackup::Stores
 
     def validate!
       raise NoopBackup::ConfigurationError, "bucket is not configured" if bucket.to_s.empty?
+
+      if access_key_id.to_s.empty? != secret_access_key.to_s.empty?
+        raise NoopBackup::ConfigurationError,
+          "access_key_id and secret_access_key must both be set, or both left blank to use the default AWS credential chain"
+      end
     end
 
     def cleanup!(key)

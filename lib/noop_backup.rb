@@ -10,7 +10,8 @@ require_relative "noop_backup/notifiers/stdout"
 module NoopBackup
   class Error < StandardError; end
 
-  class RuntimeError < Error; end
+  class BackupError < Error; end
+  class DumpTooSmallError < Error; end
   class ConfigurationError < Error; end
 
   class << self
