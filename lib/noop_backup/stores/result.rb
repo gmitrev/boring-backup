@@ -5,7 +5,7 @@ module NoopBackup::Stores
         "✅ [#{store}] back up successful — " \
         "#{human_size(bytes)} in #{duration.round(1)}s → /#{key}"
       else
-        "❌ [#{store}]Backup failed - #{error}"
+        "❌ [#{store}] Backup failed - #{error.message}"
       end
     end
 

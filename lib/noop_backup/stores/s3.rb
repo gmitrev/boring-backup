@@ -14,10 +14,10 @@ module NoopBackup::Stores
     # Prefer Aws::S3::TransferManager for streaming uploads if available.
     # Aws::S3::Resource.upload_stream is deprecated in newer versions
     def backup!(key, stream)
-      validate!
-
-      bytes = 0
       started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      bytes = 0
+
+      validate!
 
       if defined?(Aws::S3::TransferManager)
         manager = Aws::S3::TransferManager.new(client: s3_client)
@@ -36,6 +36,12 @@ module NoopBackup::Stores
       duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
 
       Result.new(success: true, store: :s3, bytes:, key:, duration:)
+    rescue => e
+      duration = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+
+      cleanup!(key)
+
+      Result.new(success: false, error: e, store: :s3, bytes:, key:, duration:)
     end
 
     def validate!

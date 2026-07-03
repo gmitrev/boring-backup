@@ -2,16 +2,6 @@ require "open3"
 
 module NoopBackup::Commands
   class Backup
-    Sink = Struct.new(:writer, :thread, keyword_init: true) do
-      def close
-        writer.close
-      end
-
-      def join
-        thread.join
-      end
-    end
-
     def self.execute
       new.execute
     end
@@ -44,10 +34,10 @@ module NoopBackup::Commands
           reader.close
         end
 
-        Sink.new(writer:, thread:)
+        NoopBackup::Tee::Sink.new(writer:, thread:)
       end
 
-      sinks_fanout = NoopBackup::Tee.new(sinks.map(&:writer))
+      sinks_fanout = NoopBackup::Tee.new(sinks)
 
       Open3.pipeline_r(*commands) do |last_stdout, wait_threads|
         IO.copy_stream(last_stdout, sinks_fanout)
