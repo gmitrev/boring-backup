@@ -10,7 +10,7 @@ module NoopBackup
       :stores
 
     def initialize
-      @prefix = ENV.fetch("NBU_PREIFX", "database")
+      @prefix = ENV.fetch("NBU_PREFIX", "database")
       @stores = []
       @min_size = ENV.fetch("NBU_MIN_SIZE", 1024).to_i
       @notifiers = [NoopBackup::Notifiers::Stdout.new]
