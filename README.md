@@ -88,11 +88,13 @@ Bug reports and pull requests are welcome on GitHub at https://github.com/gmitre
 ## Wishlist
 
 - [ ] S3-compatible backends
-- [ ] file backends
+- [ ] file backend
 - [ ] email notifier
 - [ ] SMS notifier
 - [ ] restore command
 - [ ] test command
+- [ ] encryption
+- [ ] delete stale
 
 ## License
 

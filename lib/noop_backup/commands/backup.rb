@@ -57,7 +57,7 @@ module NoopBackup::Commands
           thread = Thread.new do
             store.backup!(@key, reader)
           rescue => e
-            # *always* return a Result, even if unexpected. Add store name for debugging
+            # *always* return a Result, even if unexpected. Add store name for debugging.
             NoopBackup::Stores::Result.new(success: false, error: e, store: store.class.name, key: @key)
           ensure
             reader.close
