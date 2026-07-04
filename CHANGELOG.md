@@ -1,7 +1,11 @@
 ## [Unreleased]
 
-- Fix legacy branch of AWS upload not receiving the correct credentials
-- Add a basic configuration validation before running the backup
+## [0.2.0] - 2026-07-04
+
+- Support multiple destination stores in a single backup run
+- Delete partial uploads and fail the job safely when a dump fails
+- Validate configuration before running, with clearer errors
+- A lot of undocumented API and configuration changes
 
 ## [0.1.3] - 2026-07-02
 
