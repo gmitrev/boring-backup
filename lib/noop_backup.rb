@@ -22,6 +22,10 @@ module NoopBackup
 
     alias_method :config, :configuration
 
+    def reset!
+      @configuration = nil
+    end
+
     def configure
       yield(configuration)
     end
