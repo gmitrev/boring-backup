@@ -28,7 +28,7 @@ module NoopBackup
     end
 
     def register(store_type)
-      raise NoopBackup::BackupError, "`config.register` requires a block" unless block_given?
+      raise NoopBackup::ConfigurationError, "`config.register` requires a block" unless block_given?
 
       store =
         case store_type.to_sym

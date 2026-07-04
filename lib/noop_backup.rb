@@ -10,10 +10,25 @@ require_relative "noop_backup/notifiers/stdout"
 module NoopBackup
   class Error < StandardError; end
 
-  class BackupError < Error; end
   class DumpTooSmallError < Error; end
   class DumpFailedError < Error; end
   class ConfigurationError < Error; end
+
+  class BackupFailedError < Error
+    attr_reader :result
+
+    def initialize(result)
+      @result = result
+
+      super("Backup failed (#{result.status}): #{result.error&.message || failed_stores(result)}")
+    end
+
+    private
+
+    def failed_stores(result)
+      result.store_results.reject(&:success).map(&:store).join(", ")
+    end
+  end
 
   class << self
     def configuration

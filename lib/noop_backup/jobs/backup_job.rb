@@ -3,7 +3,9 @@ module NoopBackup
     queue_as :default
 
     def perform
-      NoopBackup::Commands::Backup.execute
+      result = NoopBackup::Commands::Backup.execute
+
+      raise NoopBackup::BackupFailedError.new(result) unless result.success?
     end
   end
 end
