@@ -19,9 +19,7 @@ module NoopBackup
       text = "Look at my horse, my horse is amazing"
       command = generate_shell_command(output: text)
 
-      # TODO: Find a way to disable the report implicitly, maybe a flag when running tests
-      # or only output when in terminal, not in scripts
-      result = NoopBackup::Commands::Backup.execute(command:, report: false)
+      result = NoopBackup::Commands::Backup.execute(command:)
 
       assert result.success?
       assert_equal(sink.string, text)
@@ -42,7 +40,7 @@ module NoopBackup
       text = "Look at my horse, my horse is amazing"
       command = generate_shell_command(output: text)
 
-      result = NoopBackup::Commands::Backup.execute(command:, report: false)
+      result = NoopBackup::Commands::Backup.execute(command:)
 
       assert result.success?
       assert_equal(text, sink_a.string)
@@ -63,7 +61,7 @@ module NoopBackup
 
       command = generate_shell_command(output: "truncated dump", exit_code: 1)
 
-      result = NoopBackup::Commands::Backup.execute(command:, report: false)
+      result = NoopBackup::Commands::Backup.execute(command:)
 
       refute result.success?
       assert_instance_of NoopBackup::DumpFailedError, result.error

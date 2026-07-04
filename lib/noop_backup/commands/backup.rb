@@ -26,7 +26,7 @@ module NoopBackup::Commands
   end
 
   class Backup
-    def self.execute(report: true, command: nil)
+    def self.execute(report: !NoopBackup.testing?, command: nil)
       result = new(command).execute
 
       result.report if report
@@ -49,7 +49,7 @@ module NoopBackup::Commands
       ]
 
       # Pipe pg_dump through pv if installed for a basic progress report
-      commands << ["pv", "-btra"] if system("which", "pv", out: File::NULL, err: File::NULL)
+      commands << ["pv", "-btra"] if !NoopBackup.testing? && system("which", "pv", out: File::NULL, err: File::NULL)
 
       Open3.pipeline_r(*commands) do |last_stdout, wait_threads|
         @sinks = config.stores.map do |store|

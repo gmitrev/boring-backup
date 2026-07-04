@@ -6,4 +6,6 @@ require_relative "support/fake_store"
 require "minitest/autorun"
 require "minitest/reporters"
 
+NoopBackup.testing = true
+
 Minitest::Reporters.use! Minitest::Reporters::DefaultReporter.new(color: true)
