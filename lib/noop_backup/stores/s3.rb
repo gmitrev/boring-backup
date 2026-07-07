@@ -60,7 +60,7 @@ module NoopBackup::Stores
     end
 
     def cleanup!(key)
-      s3_client.delete_object(bucket:, key: key)
+      s3_client.delete_object(bucket:, key:)
     rescue => e
       warn "Failed to clean up partial upload #{key}: #{e.message}"
     end
