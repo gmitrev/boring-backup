@@ -75,6 +75,20 @@ NoopBackup.configure do |config|
 end
 ```
 
+### Ignoring tables
+
+To skip the rows of tables you don't need backed up, such as audit trails or job history:
+
+```rb
+NoopBackup.configure do |config|
+  config.ignore_tables = %w[versions logs]
+end
+```
+
+Or set `NBU_IGNORE_TABLES=versions,logs`.
+
+A restore still creates these tables empty.
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake test` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.

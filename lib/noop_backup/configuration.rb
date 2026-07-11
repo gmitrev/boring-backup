@@ -9,7 +9,7 @@ module NoopBackup
       :pg_database
 
     attr_reader :stores, :notifiers
-    attr_writer :report, :dump_command
+    attr_writer :report, :dump_command, :ignore_tables
 
     def initialize
       @prefix = ENV.fetch("NBU_PREFIX", "database")
@@ -17,14 +17,25 @@ module NoopBackup
       @min_size = ENV.fetch("NBU_MIN_SIZE", 2048).to_i
       @notifiers = [NoopBackup::Notifiers::Stdout.new]
       @report = true
+      @ignore_tables = ENV.fetch("NBU_IGNORE_TABLES", "").split(",")
     end
 
     def report?
       @report
     end
 
+    def ignore_tables
+      Array(@ignore_tables).map { |table| table.to_s.strip }.reject(&:empty?).uniq
+    end
+
     def dump_command
-      @dump_command || [pg_env, "pg_dump", "--format=custom", "--no-owner"]
+      @dump_command || [
+        pg_env,
+        "pg_dump",
+        "--format=custom",
+        "--no-owner",
+        *ignore_tables.map { |table| "--exclude-table-data=#{table}" }
+      ]
     end
 
     def register(store_type)
