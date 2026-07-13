@@ -2,7 +2,24 @@ require "aws-sdk-s3"
 
 module NoopBackup::Stores
   class S3 < Store
+    DEFAULT_STORAGE_CLASS = :standard_ia
+
+    STORAGE_CLASSES = %i[
+      standard
+      standard_ia
+      onezone_ia
+      intelligent_tiering
+      glacier_ir
+      glacier
+      deep_archive
+      reduced_redundancy
+      express_onezone
+      outposts
+      snow
+    ].freeze
+
     attr_accessor :bucket, :region, :access_key_id, :secret_access_key, :part_size, :thread_count
+    attr_writer :storage_class
 
     def initialize
       @bucket = ENV["AWS_S3_BUCKET"]
@@ -11,6 +28,13 @@ module NoopBackup::Stores
       @secret_access_key = ENV["AWS_SECRET_ACCESS_KEY"]
       @part_size = ENV.fetch("NBU_S3_PART_SIZE", 8 * 1024 * 1024).to_i
       @thread_count = ENV.fetch("NBU_S3_THREAD_COUNT", 2).to_i
+      @storage_class = ENV.fetch("NBU_S3_STORAGE_CLASS", DEFAULT_STORAGE_CLASS)
+    end
+
+    def storage_class
+      value = @storage_class.to_s.strip.downcase
+
+      value.empty? ? nil : value.to_sym
     end
 
     # Prefer Aws::S3::TransferManager for streaming uploads if available.
@@ -26,13 +50,13 @@ module NoopBackup::Stores
       if defined?(Aws::S3::TransferManager)
         manager = Aws::S3::TransferManager.new(client: s3_client)
 
-        manager.upload_stream(bucket:, key: key, part_size:, thread_count:) do |s3_stream|
+        manager.upload_stream(bucket:, key: key, **upload_options) do |s3_stream|
           bytes = IO.copy_stream(stream, s3_stream)
         end
       else
         object = Aws::S3::Resource.new(client: s3_client).bucket(bucket).object(key)
 
-        object.upload_stream(part_size:, thread_count:) do |s3_stream|
+        object.upload_stream(**upload_options) do |s3_stream|
           bytes = IO.copy_stream(stream, s3_stream)
         end
       end
@@ -59,6 +83,11 @@ module NoopBackup::Stores
         raise NoopBackup::ConfigurationError,
           "access_key_id and secret_access_key must both be set, or both left blank to use the default AWS credential chain"
       end
+
+      if storage_class && !STORAGE_CLASSES.include?(storage_class)
+        raise NoopBackup::ConfigurationError,
+          "unknown storage class: #{storage_class.inspect} (expected one of: #{STORAGE_CLASSES.map(&:inspect).join(", ")}, or nil to use the bucket default)"
+      end
     end
 
     def cleanup!(key)
@@ -68,6 +97,12 @@ module NoopBackup::Stores
     end
 
     private
+
+    def upload_options
+      options = {part_size:, thread_count:}
+      options[:storage_class] = storage_class.to_s.upcase if storage_class
+      options
+    end
 
     def s3_client
       @_s3_client ||= Aws::S3::Client.new(**s3_config)
