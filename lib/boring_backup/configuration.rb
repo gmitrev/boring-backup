@@ -62,8 +62,6 @@ module BoringBackup
     end
 
     def register(store_type)
-      raise BoringBackup::ConfigurationError, "`config.register` requires a block" unless block_given?
-
       store =
         case store_type.to_sym
         when :s3 then build_s3_store
@@ -72,7 +70,9 @@ module BoringBackup
 
       @stores << store
 
-      yield store
+      yield store if block_given?
+
+      store
     end
 
     def notifier(type)

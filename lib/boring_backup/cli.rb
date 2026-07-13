@@ -1,8 +1,24 @@
 require "thor"
+require "pastel"
+require "tty-prompt"
+require "tty-spinner"
 
 module BoringBackup
   class CLI < Thor
+    include Thor::Actions
+
+    INITIALIZER = "config/initializers/boring_backup.rb"
+    RECURRING = "config/recurring.yml"
+    BINSTUB = "bin/bb"
+
+    DEFAULT_SCHEDULE = "every day at 3am"
+    PRODUCTION_ANCHOR = /^production:[ \t]*\r?\n/
+
+    add_runtime_options!
+
     def self.exit_on_failure? = true
+
+    def self.source_root = File.expand_path("templates", __dir__)
 
     desc "backup", "Create and store a new backup"
     def backup
@@ -12,6 +28,208 @@ module BoringBackup
     rescue => e
       warn e
       exit 1
+    end
+
+    desc "install", "Wire up recurring backups in this app"
+    def install
+      say "\n  #{pastel.bold("Boring Backup")}\n\n"
+
+      preflight
+
+      store = configure_store
+      write_initializer(store)
+      install_schedule
+      install_binstub
+
+      say_next_steps
+    end
+
+    private
+
+    def preflight
+      check "Rails app", rails? && "config/environment.rb"
+      check "Scheduler", solid_queue? && "Solid Queue (#{RECURRING})", hint: "no supported scheduler found"
+      check "Database", database, hint: "could not read ActiveRecord config"
+      check "Store", configured_store_summary, hint: "none configured"
+
+      say ""
+    end
+
+    def check(label, value, hint: "not found")
+      mark = value ? pastel.green("✓") : pastel.yellow("✗")
+      detail = value ? pastel.dim(value.to_s) : pastel.dim(hint)
+
+      say "  #{mark} #{label.to_s.ljust(10)} #{detail}"
+    end
+
+    def rails?
+      File.exist?("config/environment.rb")
+    end
+
+    def solid_queue?
+      File.exist?(RECURRING) && gemfile_lock.include?("solid_queue")
+    end
+
+    def gemfile_lock
+      @gemfile_lock ||= File.exist?("Gemfile.lock") ? read("Gemfile.lock") : ""
+    end
+
+    # A C/POSIX locale defaults external encoding to US-ASCII, which raises on any
+    # non-ASCII byte in the host's config.
+    def read(path)
+      File.read(path, mode: "r:UTF-8")
+    end
+
+    def database
+      return @database if defined?(@database)
+
+      @database = spinner("Reading database config") do
+        BoringBackup.prepare!
+        BoringBackup.config.pg_env["PGDATABASE"]
+      end
+    end
+
+    def spinner(message)
+      spinner = TTY::Spinner.new("  #{pastel.dim(message)} :spinner", format: :dots, clear: true, output: $stdout)
+      spinner.auto_spin
+
+      yield
+    rescue
+      nil
+    ensure
+      spinner.stop
+    end
+
+    def env_store?
+      !ENV["AWS_S3_BUCKET"].to_s.empty?
+    end
+
+    def configured_store_summary
+      return "S3 — s3://#{ENV["AWS_S3_BUCKET"]} (from ENV)" if env_store?
+
+      "S3 — #{INITIALIZER}" if File.exist?(INITIALIZER)
+    end
+
+    def configure_store
+      return if File.exist?(INITIALIZER)
+      return if env_store? && prompt.yes?("Use the S3 bucket already in ENV (#{ENV["AWS_S3_BUCKET"]})?")
+
+      prompt.select("Where should backups go?") do |menu|
+        menu.choice "S3 (or S3-compatible: R2, MinIO, Spaces)", :s3
+      end
+
+      {
+        bucket: prompt.ask("Bucket name:", required: true),
+        region: prompt.ask("Region:", default: ENV.fetch("AWS_REGION", "us-east-1"))
+      }
+    end
+
+    def write_initializer(store)
+      unless store
+        if File.exist?(INITIALIZER)
+          say_status :identical, INITIALIZER, :blue
+        else
+          say_status :skip, "#{INITIALIZER} not needed — the S3 store reads its config from ENV", :blue
+        end
+
+        return
+      end
+
+      create_file INITIALIZER, initializer_body(store)
+
+      say_credentials_note
+    end
+
+    def initializer_body(store)
+      <<~RUBY
+        BoringBackup.configure do |config|
+          config.register(:s3) do |store|
+            store.bucket = #{store[:bucket].inspect}
+            store.region = #{store[:region].inspect}
+          end
+        end
+      RUBY
+    end
+
+    def say_credentials_note
+      say_status :note, "credentials come from AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY in the backup environment, or an IAM role", :blue
+      say "  #{pastel.dim("Keep them out of #{INITIALIZER} — it's committed.")}\n"
+    end
+
+    def install_schedule
+      return print_manual_schedule unless solid_queue?
+
+      recurring = read(RECURRING)
+
+      if recurring.include?("BoringBackup::BackupJob")
+        say_status :identical, "#{RECURRING} already runs BoringBackup::BackupJob", :blue
+        return
+      end
+
+      unless recurring.match?(PRODUCTION_ANCHOR)
+        say_status :skip, "#{RECURRING} has no `production:` block", :yellow
+        return print_manual_schedule
+      end
+
+      schedule = prompt.ask("Schedule:", default: DEFAULT_SCHEDULE)
+
+      return unless prompt.yes?("Add the backup job to #{RECURRING} under `production:`?")
+
+      inject_schedule(recurring, schedule)
+
+      say_status :insert, RECURRING, :green
+      say_status :note, "backups run in production only — dev and staging are untouched", :blue
+    end
+
+    # Text substitution, not parse-and-redump: Psych would strip the host's comments.
+    def inject_schedule(recurring, schedule)
+      entry = <<~YAML.gsub(/^(?=.)/, "  ")
+        boring_backup:
+          class: BoringBackup::BackupJob
+          schedule: #{schedule}
+      YAML
+
+      updated = recurring.sub(PRODUCTION_ANCHOR) { |anchor| "#{anchor}#{entry}" }
+
+      File.write(RECURRING, updated, mode: "w:UTF-8")
+    end
+
+    def print_manual_schedule
+      say "\n  #{pastel.yellow("No supported scheduler detected.")} Run the backup from cron instead:\n\n"
+      say "#{pastel.dim("    0 3 * * *  cd /path/to/app && #{backup_command}")}\n\n"
+    end
+
+    def install_binstub
+      return unless File.directory?("bin")
+
+      if binstub?
+        say_status :identical, BINSTUB, :blue
+        return
+      end
+
+      return unless prompt.yes?("Add a #{BINSTUB} binstub? (drops the `bundle exec` prefix)")
+
+      run "bundle binstubs boring-backup"
+    end
+
+    def binstub?
+      File.exist?(BINSTUB)
+    end
+
+    def backup_command
+      binstub? ? "#{BINSTUB} backup" : "bundle exec bb backup"
+    end
+
+    def say_next_steps
+      say "\n  #{pastel.bold("Next:")} #{pastel.cyan(backup_command)}   #{pastel.dim("# run it once, now, to be sure")}\n\n"
+    end
+
+    def prompt
+      @prompt ||= TTY::Prompt.new
+    end
+
+    def pastel
+      @pastel ||= Pastel.new
     end
   end
 end
