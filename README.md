@@ -20,6 +20,13 @@ gem install boring-backup
 
 The gem requires `pg_dump` to be installed on the machine that is running it.
 
+Storage backends bring their own dependencies, which are not installed by default. To use
+the `:s3` store, add the AWS SDK to your `Gemfile` as well:
+
+```bash
+bundle add aws-sdk-s3
+```
+
 ## Usage
 
 ### Automatic

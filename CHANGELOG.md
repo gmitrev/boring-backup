@@ -1,5 +1,8 @@
 ## [Unreleased]
 
+- **`aws-sdk-s3` is no longer a dependency of the gem.** apps using the `:s3` store must add `gem
+"aws-sdk-s3"` to their own `Gemfile`.
+
 ## [0.4.0] - 2026-07-13
 
 - **Renamed the gem from `noop-backup` to `boring-backup`.** Breaking, with no shims:
