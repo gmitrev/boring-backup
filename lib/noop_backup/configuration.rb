@@ -1,15 +1,18 @@
 module NoopBackup
   class Configuration
+    DEFAULT_SENTINEL_HOST = "https://boringbackup.com"
+
     attr_accessor :prefix,
       :min_size,
       :pg_host,
       :pg_port,
       :pg_user,
       :pg_password,
-      :pg_database
+      :pg_database,
+      :sentinel_key
 
-    attr_reader :stores, :notifiers
-    attr_writer :report, :dump_command, :ignore_tables
+    attr_reader :stores
+    attr_writer :report, :dump_command, :ignore_tables, :sentinel_host
 
     def initialize
       @prefix = ENV.fetch("NBU_PREFIX", "database")
@@ -18,10 +21,30 @@ module NoopBackup
       @notifiers = [NoopBackup::Notifiers::Stdout.new]
       @report = true
       @ignore_tables = ENV.fetch("NBU_IGNORE_TABLES", "").split(",")
+      @sentinel_key = ENV["NBU_SENTINEL_KEY"]
+      @sentinel_host = ENV.fetch("NBU_SENTINEL_HOST", DEFAULT_SENTINEL_HOST)
     end
 
     def report?
       @report
+    end
+
+    def sentinel_host
+      @sentinel_host || DEFAULT_SENTINEL_HOST
+    end
+
+    def sentinel?
+      !sentinel_key.to_s.empty?
+    end
+
+    def sentinel
+      return unless sentinel?
+
+      @sentinel ||= NoopBackup::Notifiers::Sentinel.new(key: sentinel_key, host: sentinel_host)
+    end
+
+    def notifiers
+      [*@notifiers, sentinel].compact
     end
 
     def ignore_tables

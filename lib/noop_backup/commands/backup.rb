@@ -14,14 +14,14 @@ module NoopBackup::Commands
       :partial_success
     end
 
+    def messages
+      return ["❌ Fatal error: #{error.message}"] if error
+
+      store_results.map(&:message)
+    end
+
     def report
-      if error
-        NoopBackup.notify "❌ Fatal error: #{error.message}"
-      else
-        store_results.each do |result|
-          NoopBackup.notify result.message
-        end
-      end
+      NoopBackup.notify(self)
     end
   end
 
@@ -108,7 +108,7 @@ module NoopBackup::Commands
       @sinks.each do |sink|
         sink.store.cleanup!(@key) if sink.collect&.success
       rescue => e
-        NoopBackup.notify "⚠️ Cleanup failed for #{sink.store.class}: #{e.message}"
+        warn "⚠️ Cleanup failed for #{sink.store.class}: #{e.message}"
       end
     end
 

@@ -4,15 +4,20 @@ require "json"
 
 module NoopBackup::Notifiers
   class Slack
+    OPEN_TIMEOUT = 5
+    READ_TIMEOUT = 10
+
     attr_accessor :webhook_url
 
-    def notify(text)
+    def notify(result)
       uri = URI(webhook_url)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
+      http.open_timeout = OPEN_TIMEOUT
+      http.read_timeout = READ_TIMEOUT
 
-      request = Net::HTTP::Post.new(uri.path, "Content-Type" => "application/json")
-      request.body = {text: text}.to_json
+      request = Net::HTTP::Post.new(uri.request_uri, "Content-Type" => "application/json")
+      request.body = {text: result.messages.join("\n")}.to_json
 
       response = http.request(request)
 

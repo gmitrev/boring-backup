@@ -6,6 +6,7 @@ require_relative "noop_backup/stores"
 require_relative "noop_backup/commands/backup"
 require_relative "noop_backup/notifiers/slack"
 require_relative "noop_backup/notifiers/stdout"
+require_relative "noop_backup/notifiers/sentinel"
 
 module NoopBackup
   class Error < StandardError; end
@@ -52,9 +53,9 @@ module NoopBackup
       require env_file if File.exist?(env_file)
     end
 
-    def notify(message)
+    def notify(result)
       config.notifiers.each do |notifier|
-        notifier.notify(message)
+        notifier.notify(result)
       end
     end
 
