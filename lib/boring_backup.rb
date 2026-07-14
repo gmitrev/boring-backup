@@ -4,6 +4,7 @@ require_relative "boring_backup/tee"
 require_relative "boring_backup/utils"
 require_relative "boring_backup/stores"
 require_relative "boring_backup/commands/backup"
+require_relative "boring_backup/commands/doctor"
 require_relative "boring_backup/notifiers/slack"
 require_relative "boring_backup/notifiers/stdout"
 require_relative "boring_backup/notifiers/sentinel"
@@ -51,6 +52,16 @@ module BoringBackup
       env_file = File.expand_path("config/environment.rb")
 
       require env_file if File.exist?(env_file)
+    end
+
+    def environment
+      return ::Rails.env.to_s if defined?(::Rails) && ::Rails.respond_to?(:env)
+
+      ENV["RAILS_ENV"] || ENV["RACK_ENV"] || "development"
+    end
+
+    def production?
+      environment == "production"
     end
 
     def notify(result)

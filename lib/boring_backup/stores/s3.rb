@@ -37,6 +37,12 @@ module BoringBackup::Stores
       value.empty? ? nil : value.to_sym
     end
 
+    def name = "s3"
+
+    def description
+      [bucket.to_s.empty? ? "no bucket" : "s3://#{bucket}", region].compact.join(" ")
+    end
+
     # Prefer Aws::S3::TransferManager for streaming uploads if available.
     # Aws::S3::Resource.upload_stream is deprecated in newer versions
     def backup!(key, stream)

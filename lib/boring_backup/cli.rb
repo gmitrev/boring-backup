@@ -40,6 +40,25 @@ module BoringBackup
       exit 1
     end
 
+    desc "doctor", "Check that backups are set up correctly"
+    def doctor
+      spinner("Booting") { BoringBackup.prepare! }
+
+      say "  #{pastel.bold("Boring Backup")}  #{pastel.dim("doctor · #{BoringBackup.environment}")}"
+
+      result = spinner("Running checks") { BoringBackup::Commands::Doctor.execute }
+
+      width = result.checks.map { |check| check.name.length }.max
+
+      result.checks.each { |check| say "  #{check_line(check, width)}" }
+      say "\n  #{doctor_verdict(result)}\n"
+
+      exit 1 unless result.success?
+    rescue => e
+      say "  #{pastel.red("✗")} #{e.message}\n"
+      exit 1
+    end
+
     desc "install", "Wire up recurring backups in this app"
     def install
       say "\n  #{pastel.bold("Boring Backup")}\n\n"
@@ -56,8 +75,6 @@ module BoringBackup
 
     private
 
-    # pg_dump's output size is unknowable up front (custom format self-compresses), so this
-    # is a live meter, not a percentage bar.
     def stream_backup
       BoringBackup.config.silence_stdout!
 
@@ -69,8 +86,6 @@ module BoringBackup
       clear_line
     end
 
-    # The callback runs on every chunk, so redraws are throttled and skipped entirely
-    # when stdout isn't a terminal (cron, queue logs).
     def meter
       return unless $stdout.tty?
 
@@ -116,6 +131,30 @@ module BoringBackup
       BoringBackup.utils.human_size(bytes)
     end
 
+    CHECK_MARKS = {
+      ok: ["✓", :green],
+      fail: ["✗", :red],
+      skip: ["–", :yellow]
+    }.freeze
+
+    def check_line(check, width)
+      mark, colour = CHECK_MARKS.fetch(check.status)
+
+      "#{pastel.decorate(mark, colour)} #{pastel.bold(check.name.ljust(width))}  #{pastel.dim(check.detail.to_s)}"
+    end
+
+    def doctor_verdict(result)
+      return pastel.red.bold("#{result.failures.size} check(s) failed.") unless result.success?
+
+      skipped = result.checks.count { |check| check.status == :skip }
+
+      if skipped.zero?
+        pastel.green.bold("Everything checks out.")
+      else
+        pastel.green.bold("Checks passed.") + pastel.dim(" #{skipped} skipped — run this where the credentials live to verify the bucket.")
+      end
+    end
+
     def preflight
       check "Rails app", rails? && "config/environment.rb"
       check "Scheduler", solid_queue? && "Solid Queue (#{RECURRING})", hint: "no supported scheduler found"
@@ -144,8 +183,6 @@ module BoringBackup
       @gemfile_lock ||= File.exist?("Gemfile.lock") ? read("Gemfile.lock") : ""
     end
 
-    # A C/POSIX locale defaults external encoding to US-ASCII, which raises on any
-    # non-ASCII byte in the host's config.
     def read(path)
       File.read(path, mode: "r:UTF-8")
     end
@@ -254,7 +291,6 @@ module BoringBackup
       say_status :note, "backups run in production only — dev and staging are untouched", :blue
     end
 
-    # Text substitution, not parse-and-redump: Psych would strip the host's comments.
     def inject_schedule(recurring, schedule)
       entry = <<~YAML.gsub(/^(?=.)/, "  ")
         boring_backup:
@@ -294,7 +330,11 @@ module BoringBackup
     end
 
     def say_next_steps
-      say "\n  #{pastel.bold("Next:")} #{pastel.cyan(backup_command)}   #{pastel.dim("# run it once, now, to be sure")}\n\n"
+      say "\n  #{pastel.bold("Next:")} #{pastel.cyan(doctor_command)}   #{pastel.dim("# check the setup before it runs at 3am")}\n\n"
+    end
+
+    def doctor_command
+      binstub? ? "#{BINSTUB} doctor" : "bundle exec bb doctor"
     end
 
     def prompt
