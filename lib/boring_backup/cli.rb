@@ -210,19 +210,12 @@ module BoringBackup
       clear_line
     end
 
-    def env_store?
-      !ENV["AWS_S3_BUCKET"].to_s.empty?
-    end
-
     def configured_store_summary
-      return "S3 — s3://#{ENV["AWS_S3_BUCKET"]} (from ENV)" if env_store?
-
       "S3 — #{INITIALIZER}" if File.exist?(INITIALIZER)
     end
 
     def configure_store
       return if File.exist?(INITIALIZER)
-      return if env_store? && prompt.yes?("Use the S3 bucket already in ENV (#{ENV["AWS_S3_BUCKET"]})?")
 
       prompt.select("Where should backups go?") do |menu|
         menu.choice "S3 (or S3-compatible: R2, MinIO, Spaces)", :s3
@@ -236,12 +229,7 @@ module BoringBackup
 
     def write_initializer(store)
       unless store
-        if File.exist?(INITIALIZER)
-          say_status :identical, INITIALIZER, :blue
-        else
-          say_status :skip, "#{INITIALIZER} not needed — the S3 store reads its config from ENV", :blue
-        end
-
+        say_status :identical, INITIALIZER, :blue
         return
       end
 

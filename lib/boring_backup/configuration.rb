@@ -102,11 +102,11 @@ module BoringBackup
 
     def pg_env
       {
-        "PGHOST" => (pg_host || db_config[:host])&.to_s,
-        "PGPORT" => (pg_port || db_config[:port])&.to_s,
-        "PGUSER" => (pg_user || db_config[:username])&.to_s,
-        "PGPASSWORD" => (pg_password || db_config[:password])&.to_s,
-        "PGDATABASE" => (pg_database || db_config[:database])&.to_s
+        "PGHOST" => (pg_host || db_config[:host] || ENV["PGHOST"])&.to_s,
+        "PGPORT" => (pg_port || db_config[:port] || ENV["PGPORT"])&.to_s,
+        "PGUSER" => (pg_user || db_config[:username] || ENV["PGUSER"])&.to_s,
+        "PGPASSWORD" => (pg_password || db_config[:password] || ENV["PGPASSWORD"])&.to_s,
+        "PGDATABASE" => (pg_database || db_config[:database] || ENV["PGDATABASE"])&.to_s
       }.compact
     end
 

@@ -22,7 +22,6 @@ module BoringBackup::Stores
     attr_writer :storage_class
 
     def initialize
-      @bucket = ENV["AWS_S3_BUCKET"]
       @region = ENV["AWS_REGION"]
       @access_key_id = ENV["AWS_ACCESS_KEY_ID"]
       @secret_access_key = ENV["AWS_SECRET_ACCESS_KEY"]

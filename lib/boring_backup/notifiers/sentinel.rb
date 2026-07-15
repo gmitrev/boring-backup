@@ -52,11 +52,11 @@ module BoringBackup::Notifiers
     private
 
     def normalized_host
-      uri = URI.parse(host)
+      return host if host.include?("://")
 
-      return host if uri.is_a?(URI::HTTP)
+      scheme = LOCAL_HOSTS.include?(host.split(":").first) ? "http" : "https"
 
-      "#{LOCAL_HOSTS.include?(uri.scheme) ? "http" : "https"}://#{host}"
+      "#{scheme}://#{host}"
     end
 
     def post(body)

@@ -56,6 +56,18 @@ module BoringBackup
       end
     end
 
+    def test_pg_env_falls_back_to_pg_environment_variables
+      with_env("PGDATABASE", "env_db") do
+        assert_equal("env_db", BoringBackup::Configuration.new.pg_env["PGDATABASE"])
+      end
+    end
+
+    def test_explicit_pg_config_wins_over_environment
+      with_env("PGDATABASE", "env_db") do
+        assert_equal("boring_backup_test", build_config.pg_env["PGDATABASE"])
+      end
+    end
+
     def test_explicit_dump_command_ignores_ignore_tables
       config = build_config
       config.ignore_tables = ["versions"]
