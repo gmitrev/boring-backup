@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+- `bb doctor` - improved scheduler checks (now supports `sidekiq-crosidekiq-cronn`)
+
 ## [0.5.0] - 2026-07-14
 
 - **`aws-sdk-s3` is no longer a dependency of the gem.** apps using the `:s3` store must add `gem

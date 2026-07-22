@@ -1,6 +1,7 @@
 module BoringBackup::Commands
   Check = Struct.new(:name, :status, :detail, keyword_init: true) do
     def failed? = status == :fail
+    def ok? = status == :ok
   end
 
   DoctorResult = Struct.new(:checks, keyword_init: true) do
@@ -10,8 +11,8 @@ module BoringBackup::Commands
   end
 
   class Doctor
-    RECURRING = "config/recurring.yml"
-
+    SOLID_QUEUE_SCHEDULE_FILE = "config/recurring.yml"
+    SIDEKIQ_CRON_SCHEDULE_FILE = "config/schedule.yml"
     def self.execute = new.execute
 
     def execute
@@ -21,7 +22,7 @@ module BoringBackup::Commands
         database_resolved,
         stores_registered,
         *config.stores.flat_map { |store| store_checks(store) },
-        schedule_registered
+        *scheduler_checks
       ]
 
       DoctorResult.new(checks: checks.compact)
@@ -103,29 +104,26 @@ module BoringBackup::Commands
       [check(store.name, :fail, e.message)]
     end
 
-    def schedule_registered
-      return check("schedule", :skip, "no #{RECURRING} — using cron or another scheduler?") unless File.exist?(RECURRING)
+    def scheduler_checks
+      checks = [solid_queue_check, sidekiq_cron_check].compact
 
-      unless File.read(RECURRING, mode: "r:UTF-8").include?("BoringBackup::BackupJob")
-        return check("schedule", :fail, "#{RECURRING} does not run BoringBackup::BackupJob")
+      if checks.none?(&:ok?)
+        [check("scheduler detected", :skip, "no schedulers detected. Make sure BackupJob is executed in a cron or within a scheduler.")]
+      else
+        checks.select(&:ok?)
       end
-
-      unless backup_job_loadable?
-        return check("schedule", :fail, "BoringBackup::BackupJob won't load — is activejob in the Gemfile?")
-      end
-
-      check("schedule", :ok, "#{RECURRING} runs BoringBackup::BackupJob")
     end
 
-    def backup_job_loadable?
-      return false unless defined?(::ActiveJob)
+    def solid_queue_check
+      if File.exist?(SOLID_QUEUE_SCHEDULE_FILE) && File.read(SOLID_QUEUE_SCHEDULE_FILE, mode: "r:UTF-8").include?("BoringBackup::BackupJob")
+        check("scheduler detected", :ok, "solid-queue: #{SOLID_QUEUE_SCHEDULE_FILE}")
+      end
+    end
 
-      Object.const_get("ActiveJob::Base")
-      require "boring_backup/jobs/backup_job"
-
-      true
-    rescue LoadError, NameError
-      false
+    def sidekiq_cron_check
+      if File.exist?(SIDEKIQ_CRON_SCHEDULE_FILE) && File.read(SIDEKIQ_CRON_SCHEDULE_FILE, mode: "r:UTF-8").include?("BoringBackup::BackupJob")
+        check("scheduler detected", :ok, "sidekiq-cron: #{SIDEKIQ_CRON_SCHEDULE_FILE}")
+      end
     end
 
     def config
