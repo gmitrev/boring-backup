@@ -1,6 +1,7 @@
 ## [Unreleased]
 
 - `bb doctor` - improved scheduler checks (now supports `sidekiq-crosidekiq-cronn`)
+- support `PG*` env vars
 
 ## [0.5.0] - 2026-07-14
 
